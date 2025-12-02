@@ -10,13 +10,10 @@ def day_in_year(year):
 def day_of_year(day, month ,year) :
     day_of_years = 0
     day_in_month = [0,31,28,31,30,31,30,31,31,30,31,30,31]
-
     if is_leap(year):
         day_in_month[2] += 1
-
     if not(1 <= month<= 12):
         return "Invalid Input"
-    
     if not(1 <= day <= day_in_month[month]):
         return "Invalid Input"
     for i in range(1,month):
@@ -29,30 +26,26 @@ def date_diff(date1_str, date2_str):
     d2, m2, y2 = map(int, date2_str.split('-'))
 
     if "Invalid Input" in str(day_of_year(d1, m1, y1)):
-        return "Invalid Date 1"
+        return "Invalid"
     if "Invalid Input" in str(day_of_year(d2, m2, y2)):
-        return "Invalid Date 2"
+        return "Invalid"
     
     total_days = 0
 
     if y1 == y2:
         return day_of_year(d2, m2, y2) - day_of_year(d1, m1, y1) + 1
-    
+
     days_in_y1 = day_in_year(y1)
     days_remaining_in_y1 = days_in_y1 - day_of_year(d1, m1, y1) + 1
     total_days += days_remaining_in_y1
-    
 
     for y in range(y1 + 1, y2):
         total_days += day_in_year(y)
-        
+
     days_in_y2_until_date2 = day_of_year(d2, m2, y2)
     total_days += days_in_y2_until_date2
     
     return total_days
-date1_str = input("Input1 (D-M-Y เช่น 1-1-2018): ")
-date2_str = input("Input2 (D-M-Y เช่น 1-1-2020): ")
-    
-    # เรียกใช้ date_diff ด้วยสตริงวันที่โดยตรง
+date1_str,date2_str = [str(e) for e in input("Enter Input: ").split(",")]
 diff_total = date_diff(date1_str, date2_str)
-print(f"difference: {diff_total}")
+print(f"{diff_total}")
