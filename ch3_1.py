@@ -9,13 +9,29 @@ def day_of_year(day, month ,year) :
         day_in_month[2] += 1
 
     if not(1 <= month<= 12):
-        return "Invalid Input"
+        return "Invalid"
     
     if not(1 <= day <= day_in_month[month]):
-        return "Invalid Input"
+        return "Invalid"
     for i in range(1,month):
         day_of_years += day_in_month[i]
     day_of_years += day
     return day_of_years
-day,month,year = [int(e) for e in input("Input : ").split(",")]
-print(f"29/2/2023 (Not Leap): {day_of_year(day, month, year)}")
+
+day_str = input("Enter a date : ")
+
+try:
+    d, m, y = day_str.split("-")
+    if y.isdigit():
+        leap = is_leap(int(y))
+    else:
+        leap = "Invalid"
+
+    if not (d.isdigit() and m.isdigit() and y.isdigit()):
+        print(f"day of year: Invalid ,is_leap: {leap}")
+    else:
+        day, month, year = int(d), int(m), int(y)
+        print(f"day of year: {day_of_year(day, month, year)} ,is_leap: {leap}")
+
+except:
+    print("day of year: Invalid ,is_leap: False")
