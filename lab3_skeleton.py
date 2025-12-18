@@ -12,10 +12,7 @@ class Student:
         self.__student_name = name
         self.__enrolls = []
     def get_enrolled_subjects(self):
-        subject_list = []
-        for i in self.__enrolls:
-            subject_list.append(i.index)
-        return subject_list
+        return self.__enrolls
     def enroll(self, subject):
         try:
             for i in self.__enrolls :
