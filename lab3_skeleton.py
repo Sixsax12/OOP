@@ -28,12 +28,13 @@ class Student:
                 return "Error"
         except:
             return "Error"
-    def assign_grade(self,subject,grade):
-        for i in self.__enrolls :
-            if i.index ==subject :
+    def assign_grade(self, subject, grade):
+        for i in self.__enrolls:
+            if i.index == subject:
                 i.grade = grade
-            else :
-                return "Not Found"
+                return "Done"
+        return "Not Found"
+
     def drop(self, subject):
         try:
             if type(subject) == str :
@@ -51,19 +52,23 @@ class Student:
         score = 0
         credits = 0
         for i in self.__enrolls:
-            if i.grade == 'A' :
-                score += 4*i.index.credit
+            if i.grade == 'A':
+                score += 4 * i.index.credit
                 credits += i.index.credit
-            elif i.grade == 'B' :
-                score += 3*i.index.credit
+            elif i.grade == 'B':
+                score += 3 * i.index.credit
                 credits += i.index.credit
-            elif i.grade == 'C' :
-                score += 2*i.index.credit
+            elif i.grade == 'C':
+                score += 2 * i.index.credit
                 credits += i.index.credit
-            elif i.grade == 'D' :
-                score += 1*i.index.credit
+            elif i.grade == 'D':
+                score += 1 * i.index.credit
                 credits += i.index.credit
-        return credits and score/credits
+
+        if credits == 0:
+            return 0.0
+        return score / credits
+
             
 
 class Subject:
@@ -80,11 +85,6 @@ class Subject:
     @property
     def credit(self):
         return self.__subject_credit
-    @property
-    def sub(self):
-        return self.__subject_credit
-
-    
 
 class Enrollment:
     def __init__(self, subject_index):
