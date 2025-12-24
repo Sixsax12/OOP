@@ -68,6 +68,10 @@ class Account:
     @property
     def account_no(self):
         return self.__Account_no
+    
+    def reset_limit(self):
+        Rule.limit = 0
+    
     def deposit(self,atm_machine,cash):
         if atm_machine.cardIn and atm_machine.cardIn != self.__atm_card:
             raise ValueError("Not match card")
