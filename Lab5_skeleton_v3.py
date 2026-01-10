@@ -623,67 +623,73 @@ class ATM_Card(Card):
         else:
             raise ValueError("เงินไม่พอ")
         
-class DebitCard(Card):
-    pass
+# ============================================================================
+# CARD TYPES - Concrete Classes 
+# ============================================================================
 
+class DebitCard(Card):
+    def __init__(self, card_no, account_no, pin, annual_fee, daily_limit, withdraw_limit):
+        super().__init__(card_no, account_no, pin)
+        self.__annual_fee = annual_fee
+        self.__daily_limit = daily_limit
+        self.__withdraw_limit = withdraw_limit
+        self.__cashback = 0
+    @property
+    def ANNUAL_FEE(self): 
+        return self.__annual_fee
+    
+    @property
+    def DAILY_LIMIT(self): 
+        return self.__daily_limit
+    
+    @property
+    def WITHDRAW_LIMIT_PER_TRANSACTION(self): 
+        return self.__withdraw_limit
+
+    @property
+    def cashback(self): 
+        return self.__cashback
+
+    @cashback.setter
+    def cashback(self, value):
+        self.__cashback = value
+
+    def get_card_type(self):
+        return "Debit Card"
+
+    def charge_annual_fee(self, account):
+        if account.amount >= self.ANNUAL_FEE:
+            account.amount -= self.ANNUAL_FEE
+            account._create_transaction("F", "SYSTEM", "ANNUAL_FEE", self.ANNUAL_FEE, account.amount)
+            print(f"Charge Annual Fee Successful: {self.ANNUAL_FEE}")
+        else:
+            raise ValueError("Not Money")
 
 
 class ShoppingCard(DebitCard):
     ANNUAL_FEE = 300
-    CASHBACK_RATE = 0.01
     DAILY_LIMIT = 40000
     WITHDRAW_LIMIT_PER_TRANSACTION = 40000
+    CASHBACK_RATE = 0.01
+
     def __init__(self, card_no, account_no, pin):
-        super().__init__(card_no, account_no, pin)
-        self.__cashback = 0
+        super().__init__(card_no, account_no, pin, ShoppingCard.ANNUAL_FEE, ShoppingCard.DAILY_LIMIT, ShoppingCard.WITHDRAW_LIMIT_PER_TRANSACTION)
 
     def get_card_type(self):
         return "Shopping Card"
-    
-    @property
-    def cashback(self):
-        return self.__cashback
-    
-    @cashback.setter
-    def cashback(self,cashback):
-        self.__cashback = cashback
-    
-    def charge_annual_fee(self, account):
-        if (account.amount >= ShoppingCard.ANNUAL_FEE):
-            account.amount -= ShoppingCard.ANNUAL_FEE
-            account._create_transaction("F","SYSTEM","ANNUAL_FEE",ShoppingCard.ANNUAL_FEE,account.amount)
-        else:
-            raise ValueError("Not money")
 
 
 class PremiumCard(DebitCard):
     ANNUAL_FEE = 500
+    DAILY_LIMIT = 100000
     WITHDRAW_LIMIT_PER_TRANSACTION = 100000
     CASHBACK_RATE = 0.02
-    DAILY_LIMIT = 100000
-    
-    def __init__(self, card_no, account_no, pin):
-        super().__init__(card_no, account_no, pin)
-        self.__cashback = 0
 
-    @property
-    def cashback(self):
-        return self.__cashback
-    
-    @cashback.setter
-    def cashback(self,cashback):
-        self.__cashback = cashback
+    def __init__(self, card_no, account_no, pin):
+        super().__init__(card_no, account_no, pin, PremiumCard.ANNUAL_FEE, PremiumCard.DAILY_LIMIT, PremiumCard.WITHDRAW_LIMIT_PER_TRANSACTION)
 
     def get_card_type(self):
         return "Premium Card"
-    
-    def charge_annual_fee(self, account):
-        if (account.amount >= PremiumCard.ANNUAL_FEE):
-            account.amount -= PremiumCard.ANNUAL_FEE
-            account._create_transaction("F","SYSTEM","ANNUAL_FEE",PremiumCard.ANNUAL_FEE,account.amount)
-        else:
-            raise ValueError("Not money")
-
 
 
 
