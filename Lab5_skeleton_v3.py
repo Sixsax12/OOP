@@ -531,7 +531,7 @@ class FixedAccount(Account):
 
         interest = self.amount * rate * (self.__term_months / 12)
 
-        self._Account__amount += interest
+        self.amount += interest
         self._create_transaction("I",'SYSTEM', 'AUTO', interest, self.amount)
         print(f"Interest added: {interest:.2f}")
         return interest
