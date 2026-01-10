@@ -41,7 +41,6 @@ class Account(ABC):
         self.__card = None
         self.__daily_withdrawn = 0
         self.__transaction_list = []
-        user.add_account(self)
 
     # ========== Properties (5 คะแนน) ==========
     
@@ -49,6 +48,9 @@ class Account(ABC):
     def amount(self):
         """TODO: Return current balance"""
         return self.__amount
+    @amount.setter
+    def amount(self, value):
+        self.__amount = value
     
     @property
     def card(self):
@@ -74,7 +76,8 @@ class Account(ABC):
         
         TODO: เก็บ card ไว้ใน __card attribute
         """
-        self.__card = card
+        if isinstance(card,Card):
+            self.__card = card
     
     # ========== Security & Validation (5 คะแนน) ==========
     
@@ -152,6 +155,7 @@ class Account(ABC):
         - ถ้า channel มี counter_id → return counter_id
         - ถ้าไม่มี → return 'UNKNOWN'
         """
+        pass
         
 
     # ========== Abstract Methods  ==========
@@ -163,6 +167,7 @@ class Account(ABC):
         Returns:
             str: ชื่อประเภทบัญชี
         """
+        pass
         
     
     @abstractmethod
@@ -172,6 +177,7 @@ class Account(ABC):
         Returns:
             float: จำนวนดอกเบี้ยที่ได้รับ
         """
+        pass
         
     
     @abstractmethod
@@ -184,6 +190,7 @@ class Account(ABC):
         Raises:
             ValueError: ถ้าเกิน limit
         """
+        pass
         
     
     def deposit(self, channel, amount):
@@ -207,6 +214,9 @@ class Account(ABC):
         """
         if not isinstance(channel,Channel):
             raise PermissionError("Not a right session")
+        if (isinstance(channel,Counter)):
+            if self not in channel.authenticated_account:
+                raise PermissionError("Not a right session")
         if isinstance(channel,(ATM_machine,EDC_machine)):
             if not channel.current_card:
                 raise PermissionError("No Card")
@@ -215,7 +225,7 @@ class Account(ABC):
         self.__amount += amount
         if isinstance(channel,ATM_machine):
             channel.receive_cash(amount)
-        self._create_transaction("D",channel.type,channel.get_id,amount,self.amount)
+        self._create_transaction("D",channel.type,channel.id,amount,self.amount)
         print("deposit success")
         
     
@@ -258,7 +268,7 @@ class Account(ABC):
             if not channel.has_sufficient_cash(amount) :
                 raise ValueError("not enough cash")
             if channel.current_card.get_card_type() == "Premium Card":
-                if amount + self.__daily_withdrawn > PremiumCard.DAILY_LIMIT:
+                if amount + self.__daily_withdrawn > PremiumCard.WITHDRAW_LIMIT_PER_TRANSACTION:
                     raise ValueError("Over daily limit")
             if amount > Bank.WITHDRAW_LIMIT:
                 raise ValueError("More than daily limit")
@@ -276,7 +286,7 @@ class Account(ABC):
         if isinstance(channel,(ATM_machine,EDC_machine)):
             self.__daily_withdrawn += amount
             channel.dispense_cash(amount)
-        self._create_transaction("W",channel.type,channel.get_id,amount,self.amount)
+        self._create_transaction("W",channel.type,channel.id,amount,self.amount)
         print("Withdraw Success")
         
     
@@ -337,7 +347,7 @@ class Account(ABC):
         
         self.__amount -= amount
     
-        self._create_transaction("TW",channel.type,channel.get_id,amount,self.__amount,target_account.account_no)
+        self._create_transaction("TW",channel.type,channel.id,amount,self.__amount,target_account.account_no)
         target_account.receive_transfer(amount, channel, self.__account_no)
 
 
@@ -357,7 +367,7 @@ class Account(ABC):
         2. บันทึก transaction (type='TD')
         """
         self.__amount += amount
-        self._create_transaction("TD",channel.type,channel.get_id,amount,self.__amount,source_acc_no)
+        self._create_transaction("TD",channel.type,channel.id,amount,self.__amount,source_acc_no)
         
 
 
@@ -407,6 +417,7 @@ class Card(ABC):
         Returns:
             str: ชื่อประเภทบัตร
         """
+        pass
         
 
 
@@ -416,6 +427,7 @@ class Channel(ABC):
     @abstractmethod
     def authenticate(self, *args, **kwargs):
         """ยืนยันตัวตน (แต่ละ channel มีวิธีต่างกัน)"""
+        pass
         
 
 
@@ -436,9 +448,6 @@ class SavingAccount(Account):
     def get_account_type(self):
         """TODO: Return "Saving Account" """
         return "Saving Account"
-    @property
-    def term_months(self):
-        return 0
     def calculate_interest(self):
         """คำนวณและเพิ่มดอกเบี้ย 0.5%
         
@@ -448,8 +457,8 @@ class SavingAccount(Account):
         3. บันทึก transaction (type='I', channel='SYSTEM', id='AUTO')
         4. แสดงข้อความและ return interest
         """
-        interest = self.amount * self.INTEREST_RATE
-        self._Account__amount += interest
+        interest = self.amount * SavingAccount.INTEREST_RATE
+        self.amount += interest
         self._create_transaction('I', 'SYSTEM', 'AUTO', interest, self.amount)
         print(f"Interest added: {interest:.2f}")
         return interest
@@ -522,9 +531,9 @@ class FixedAccount(Account):
 
         interest = self.amount * rate * (self.__term_months / 12)
 
-        self.amount += interest
+        self._Account__amount += interest
         self._create_transaction("I",'SYSTEM', 'AUTO', interest, self.amount)
-        print("Interest Successful")
+        print(f"Interest added: {interest:.2f}")
         return interest
         
     
@@ -551,6 +560,7 @@ class CurrentAccount(Account):
     
     def get_account_type(self):
         """TODO: Return "Current Account" """
+        return "Current Account"
         
     
     def calculate_interest(self):
@@ -560,6 +570,8 @@ class CurrentAccount(Account):
         - แสดงข้อความ "Current account: No interest"
         - return 0
         """
+        print("Current account: No interest")
+        return 0
         
     
     def _check_withdraw_limit(self, amount):
@@ -584,10 +596,10 @@ class ATM_Card(Card):
     """
     
     ANNUAL_FEE = 100
-    def __init__(self, card_no, account_no, pin):
-        super().__init__(card_no, account_no, pin)
+    
     def get_card_type(self):
         """TODO: Return "ATM Card" """
+        return "ATM Card"
         
     
     def charge_annual_fee(self, account):
@@ -605,45 +617,72 @@ class ATM_Card(Card):
         3. บันทึก transaction (type='F', channel='SYSTEM', id='ANNUAL_FEE')
         4. แสดงข้อความ
         """
+        if (account.amount >= ATM_Card.ANNUAL_FEE):
+            account.amount -= ATM_Card.ANNUAL_FEE
+            account._create_transaction("F","SYSTEM","ANNUAL_FEE",ATM_Card.ANNUAL_FEE,account.amount)
+        else:
+            raise ValueError("เงินไม่พอ")
         
 class DebitCard(Card):
-    def __init__(self, card_no, account_no, pin, fee, cashback):
-        super().__init__(card_no, account_no, pin)
-        self.__fee = fee
-        self.__cashback = cashback
-
-    @property
-    def fee(self):
-        return self.__fee
-
-    @property
-    def cashback(self):
-        return self.__cashback
-
-    def get_card_type(self):
-        return "Debit Card"
+    pass
 
 
 
 class ShoppingCard(DebitCard):
+    ANNUAL_FEE = 300
+    CASHBACK_RATE = 0.01
     DAILY_LIMIT = 40000
     WITHDRAW_LIMIT_PER_TRANSACTION = 40000
     def __init__(self, card_no, account_no, pin):
-        super().__init__(card_no, account_no, pin, fee=300, cashback=0.01)
+        super().__init__(card_no, account_no, pin)
         self.__cashback = 0
 
     def get_card_type(self):
         return "Shopping Card"
+    
+    @property
+    def cashback(self):
+        return self.__cashback
+    
+    @cashback.setter
+    def cashback(self,cashback):
+        self.__cashback = cashback
+    
+    def charge_annual_fee(self, account):
+        if (account.amount >= ShoppingCard.ANNUAL_FEE):
+            account.amount -= ShoppingCard.ANNUAL_FEE
+            account._create_transaction("F","SYSTEM","ANNUAL_FEE",ShoppingCard.ANNUAL_FEE,account.amount)
+        else:
+            raise ValueError("Not money")
 
 
 class PremiumCard(DebitCard):
+    ANNUAL_FEE = 500
     WITHDRAW_LIMIT_PER_TRANSACTION = 100000
+    CASHBACK_RATE = 0.02
     DAILY_LIMIT = 100000
+    
     def __init__(self, card_no, account_no, pin):
-        super().__init__(card_no, account_no, pin, fee=500, cashback=0.02)
+        super().__init__(card_no, account_no, pin)
         self.__cashback = 0
+
+    @property
+    def cashback(self):
+        return self.__cashback
+    
+    @cashback.setter
+    def cashback(self,cashback):
+        self.__cashback = cashback
+
     def get_card_type(self):
         return "Premium Card"
+    
+    def charge_annual_fee(self, account):
+        if (account.amount >= PremiumCard.ANNUAL_FEE):
+            account.amount -= PremiumCard.ANNUAL_FEE
+            account._create_transaction("F","SYSTEM","ANNUAL_FEE",PremiumCard.ANNUAL_FEE,account.amount)
+        else:
+            raise ValueError("Not money")
 
 
 
@@ -663,7 +702,6 @@ class ATM_machine(Channel):
     """
     
     def __init__(self, atm_no, money):
-        super().__init__()
         self.__atm_no = atm_no
         self.__money = money
         self.__current_card = None  
@@ -678,7 +716,7 @@ class ATM_machine(Channel):
     def type(self):
         return "ATM_machine"
     @property    
-    def get_id(self):
+    def id(self):
         return self.__atm_no
 
     def authenticate(self, card, pin):
@@ -719,79 +757,90 @@ class ATM_machine(Channel):
         self.__money += amount
 class Counter(Channel):
 
-    def __init__(self, counter_no):
-        self.__counter_id = counter_no
-        self.__current_account = None
+    def __init__(self,counter_no):
+        self.__counter_no = counter_no
+        self.__authenticated_account = []
+
+    @property
+    def authenticated_account(self):
+        return self.__authenticated_account
     @property
     def type(self):
         return "Counter"
     @property    
-    def get_id(self):
-        return self.__counter_id
+    def id(self):
+        return self.__counter_no
     
-    def authenticate(self, account=None):
-        self.__current_account = account
-        print("Counter authentication successful")
-        return True
+    def authenticate(self):
+        pass
 
     def verify_identity(self, account, citizen_id):
-        if account.user is None:
-            raise PermissionError("Account has no owner")
-
-        if account.user._User__citizen_id != citizen_id:
-            raise PermissionError("Identity verification failed")
-
-        self.__current_account = account
-        print("Identity verified at counter")
-        return True
+        if account.user.citizen_id == citizen_id:
+            self.__authenticated_account.append(account)
+        else:
+            raise PermissionError("Not right citizen id")
 
     def clear_session(self):
         """ลบ authenticated account"""
-        self.__current_account = None
+        self.__authenticated_account = []
 
 
 class EDC_machine(Channel):
-
-    def __init__(self, edc_no, merchant_account):
+    def __init__(self,edc_no,merchant_account):
         self.__edc_no = edc_no
-        self.__merchant_account = merchant_account
+
+        if (isinstance(merchant_account,CurrentAccount)):
+            self.__merchant_account = merchant_account
+        else:
+            raise TypeError("Not a right account Type")
         self.__current_card = None
-    @property
-    def current_card(self):
-        return self.__current_card
+
     @property
     def type(self):
         return "EDC_machine"
-    @property    
-    def get_id(self):
+
+    @property
+    def current_card(self):
+        return self.__current_card
+
+    @property
+    def id(self):
         return self.__edc_no
-    def swipe_card(self, card, pin=None):
-        """EDC swipe card (pin ถูกส่งมาแต่ไม่ใช้)"""
-        self.__current_card = card
-        return True
+    
+    def pay(self,account,amount):
 
-    def authenticate(self, card, pin=None):
-        return self.swipe_card(card, pin)
+        if not self.__current_card:
+            raise PermissionError("No Card")
+        if amount <= 0:
+            raise ValueError("ต้องจ่ายมากกว่า 0")
+        
+        if account.amount < amount:
+            raise ValueError("Insufficient Balance")
+    
+        if (self.__current_card.get_card_type() == "Shopping Card"):
+            if amount >= 1000:
+                self.__current_card.cashback += amount * ShoppingCard.CASHBACK_RATE
+        elif (self.__current_card.get_card_type() == "Premium Card"):
+            self.__current_card.cashback += amount * PremiumCard.CASHBACK_RATE
+        account.amount -= amount
+        self.__merchant_account.amount += amount
 
+
+    def authenticate(self):
+        pass
+
+    def swipe_card(self,card,pin):
+        return self.insert_card(card,pin)
+    
+    def insert_card(self, card, pin):
+        if card.validate_pin(pin):
+            self.__current_card = card
+            return True
+        else:
+            return False
+        
     def eject_card(self):
         self.__current_card = None
-    def pay(self, source_account, amount):
-        """
-        ชำระเงินผ่าน EDC
-        """
-        if self.__current_card is None:
-            raise PermissionError("No card swiped")
-
-        if amount <= 0:
-            raise ValueError("Invalid payment amount")
-
-        source_account.transfer(
-            channel=self,
-            amount=amount,
-            target_account=self.__merchant_account
-        )
-
-        print(f"EDC payment successful: {amount:.2f}")
 # ============================================================================
 # SUPPORTING CLASSES
 # ============================================================================
@@ -813,41 +862,50 @@ class Bank:
     
     def add_user(self, user):
         """TODO: ตรวจสอบ type และเพิ่มเข้า __user_list"""
-        self.__user_list.append(user)
+        if isinstance(user,User):
+            self.__user_list.append(user)
+        else:
+            raise TypeError("Not a User")
 
     def add_atm_machine(self, atm):
         """TODO: ตรวจสอบ type และเพิ่มเข้า __atm_list"""
-        self.__atm_list.append(atm)
+        if isinstance(atm,ATM_machine):
+            self.__atm_list.append(atm)
+        else:
+            raise TypeError("Not a ATM_machine")
     
     def add_edc_machine(self, edc):
         """TODO: ตรวจสอบ type และเพิ่มเข้า __edc_list"""
-        self.__edc_list.append(edc)
+        if isinstance(edc,EDC_machine):
+            self.__edc_list.append(edc)
+        else:
+            raise TypeError("Not a EDC_machine")
     
     def add_counter(self, counter):
         """TODO: ตรวจสอบ type และเพิ่มเข้า __counter_list"""
-        self.__counter_list.append(counter)
+        if (isinstance(counter,Counter)):
+            self.__counter_list.append(counter)
+        else:
+            raise TypeError("Not a Counter")
     
     def get_atm_by_id(self, atm_id):
         """TODO: หา ATM จาก atm_no และ return (หรือ None)"""
         for atm in self.__atm_list:
-            if atm.get_id == atm_id:
+            if atm.id == atm_id:
                 return atm
-        return None
     
     def get_edc_by_id(self, edc_id):
         """TODO: หา EDC จาก edc_no และ return (หรือ None)"""
         for edc in self.__edc_list:
-            if edc.get_id == edc_id:
+            if edc.id == edc_id:
                 return edc
-        return None
         
     
     def get_counter_by_id(self, counter_id):
         """TODO: หา Counter จาก counter_id และ return (หรือ None)"""
         for counter in self.__counter_list:
-            if counter.get_id == counter_id:
+            if counter.id == counter_id:
                 return counter
-        return None
     
     def search_account_from_card(self, card_no):
         """ค้นหา account จากหมายเลขบัตร
@@ -860,10 +918,7 @@ class Bank:
         - ถ้าไม่เจอ return None
         """
         for user in self.__user_list:
-            account = user.search_account_from_card(card_no)
-            if account is not None:
-                return account
-        return None
+            return user.search_account_from_card(card_no)
 
 
 class User:
@@ -874,13 +929,16 @@ class User:
         self.__citizen_id = citizen_id
         self.__name = name
         self.__account_list = []
-    
+    @property
+    def citizen_id(self):
+        return self.__citizen_id
     @property
     def name(self):
         return self.__name
     def add_account(self, account):
         """TODO: เพิ่ม account เข้า __account_list"""
-        self.__account_list.append(account)
+        if isinstance(account,Account):
+            self.__account_list.append(account)
     
     def search_account_from_card(self, card_no):
         """TODO:
@@ -889,6 +947,10 @@ class User:
         - return account
         - ถ้าไม่เจอ return None
         """
+        for account in self.__account_list:
+            if account.card:
+                if account.card.card_no == card_no:
+                    return account
         
     
     def get_all_accounts(self):
@@ -927,7 +989,6 @@ class Transaction:
         Example: "D-ATM_machine:ATM-1001-5000.00-25000.00"
         Example: "TW-Counter:COUNTER-01-2000.00-23000.00-1000000003"
         """
-    def __str__(self):
         base = f"{self.__Type}-{self.__channel_type}:{self.__channel_id}-" \
             f"{self.__amount:.2f}-{self.__balance:.2f}"
 
