@@ -840,8 +840,9 @@ class EDC_machine(Channel):
     
     def insert_card(self, card, pin):
         if card.validate_pin(pin):
-            self.__current_card = card
-            return True
+            if isinstance(card,DebitCard):
+                self.__current_card = card
+                return True
         else:
             return False
         
